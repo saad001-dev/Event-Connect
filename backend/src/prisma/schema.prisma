@@ -1,0 +1,409 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          UserRole @default(ATTENDEE)
+  status        UserStatus @default(ACTIVE)
+  avatarUrl     String?
+  phone         String?
+  company       String?
+  title         String?
+  bio           String?
+  interests     String[]
+  socialLinks   Json?
+  fcmToken      String?
+  lastLoginAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  registrations Registration[]
+  connections   Connection[] @relation("FromUser")
+  receivedConnections Connection[] @relation("ToUser")
+  businessCard   BusinessCard?
+  feedback      Feedback[]
+  pollResponses PollResponse[]
+  questions     Question[]
+  agenda        Agenda?
+  notifications Notification[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ORGANIZER
+  SPEAKER
+  SPONSOR
+  ATTENDEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Event {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  description   String?
+  startDate     DateTime
+  endDate       DateTime
+  timezone      String   @default("UTC")
+  address       Json?
+  logo          String?
+  banner        String?
+  website       String?
+  status        EventStatus @default(DRAFT)
+  maxAttendees  Int?
+  isPublished   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  registrations Registration[]
+  sessions      Session[]
+  speakers      Speaker[]
+  sponsors      Sponsor[]
+  feedback      Feedback[]
+  agendas       Agenda[]
+  notifications Notification[]
+
+  @@index([startDate])
+  @@map("events")
+}
+
+enum EventStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+model Registration {
+  id            String   @id @default(cuid())
+  eventId       String
+  userId        String
+  ticketType    TicketType
+  ticketNumber  String   @unique
+  status        RegistrationStatus @default(REGISTERED)
+  checkInTime   DateTime?
+  checkInLocation String?
+  customFields  Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  event         Event    @relation(fields: [eventId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@index([eventId, userId])
+  @@index([ticketNumber])
+  @@map("registrations")
+}
+
+enum TicketType {
+  GENERAL
+  VIP
+  SPEAKER
+  SPONSOR
+  EXHIBITOR
+  MEDIA
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  CHECKED_IN
+  CANCELLED
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  eventId     String
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  room        String?
+  location    String?
+  capacity    Int?
+  category    String
+  level       String
+  status      String   @default("SCHEDULED")
+  materials   String[]
+  recording   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event       Event    @relation(fields: [eventId], references: [id])
+  speakers    SessionSpeaker[]
+  feedback    SessionFeedback[]
+  polls       Poll[]
+  questions   Question[]
+  agendaItems AgendaItem[]
+
+  @@index([eventId, startTime])
+  @@index([startTime])
+  @@map("sessions")
+}
+
+model SessionSpeaker {
+  id        String   @id @default(cuid())
+  sessionId String
+  speakerId String
+  role      String?
+  order     Int      @default(0)
+
+  session   Session  @relation(fields: [sessionId], references: [id])
+  speaker   Speaker  @relation(fields: [speakerId], references: [id])
+
+  @@unique([sessionId, speakerId])
+  @@map("session_speakers")
+}
+
+model Speaker {
+  id          String   @id @default(cuid())
+  eventId     String
+  name        String
+  title       String?
+  company     String?
+  bio         String?
+  photo       String?
+  socialLinks Json?
+  expertise   String[]
+  rating      Float?   @default(0)
+  totalRatings Int     @default(0)
+  isKeynote   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event       Event    @relation(fields: [eventId], references: [id])
+  sessions    SessionSpeaker[]
+
+  @@map("speakers")
+}
+
+model Sponsor {
+  id            String   @id @default(cuid())
+  eventId       String
+  name          String
+  logo          String?
+  description   String?
+  website       String?
+  boothNumber   String?
+  boothLocation String?
+  contactPerson String?
+  socialLinks   Json?
+  tier          String
+  resources     String[]
+  offer         String?
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  event         Event    @relation(fields: [eventId], references: [id])
+
+  @@map("sponsors")
+}
+
+model Agenda {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+  items     AgendaItem[]
+
+  @@unique([userId, eventId])
+  @@index([userId, eventId])
+  @@map("agendas")
+}
+
+model AgendaItem {
+  id        String   @id @default(cuid())
+  agendaId  String
+  sessionId String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  agenda    Agenda   @relation(fields: [agendaId], references: [id])
+  session   Session  @relation(fields: [sessionId], references: [id])
+
+  @@unique([agendaId, sessionId])
+  @@index([sessionId])
+  @@map("agenda_items")
+}
+
+model Connection {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  eventId     String
+  status      ConnectionStatus @default(PENDING)
+  message     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  fromUser    User     @relation("FromUser", fields: [fromUserId], references: [id])
+  toUser      User     @relation("ToUser", fields: [toUserId], references: [id])
+
+  @@index([fromUserId, status])
+  @@index([toUserId, status])
+  @@unique([fromUserId, toUserId, eventId])
+  @@map("connections")
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  BLOCKED
+}
+
+model BusinessCard {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String
+  title       String?
+  company     String?
+  email       String?
+  phone       String?
+  address     String?
+  website     String?
+  socialLinks Json?
+  bio         String?
+  photo       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("business_cards")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String?
+  type      String
+  title     String
+  body      String
+  data      Json?
+  read      Boolean  @default(false)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event?   @relation(fields: [eventId], references: [id])
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model Poll {
+  id              String   @id @default(cuid())
+  sessionId       String
+  question        String
+  options         String[]
+  isMultipleChoice Boolean @default(false)
+  anonymous       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  startTime       DateTime?
+  endTime         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  session         Session  @relation(fields: [sessionId], references: [id])
+  responses       PollResponse[]
+
+  @@index([sessionId, isActive])
+  @@map("polls")
+}
+
+model PollResponse {
+  id          String   @id @default(cuid())
+  pollId      String
+  userId      String
+  optionIndex Int
+  createdAt   DateTime @default(now())
+
+  poll        Poll     @relation(fields: [pollId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([pollId, userId])
+  @@map("poll_responses")
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String
+  question    String
+  isAnonymous Boolean  @default(false)
+  votes       Int      @default(0)
+  answered    Boolean  @default(false)
+  answer      String?
+  answeredBy  String?
+  answeredAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session     Session  @relation(fields: [sessionId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([sessionId, answered])
+  @@map("questions")
+}
+
+model SessionFeedback {
+  id              String   @id @default(cuid())
+  sessionId       String
+  userId          String
+  rating          Int
+  contentRating   Int?
+  speakerRating   Int?
+  engagementRating Int?
+  comment         String?
+  createdAt       DateTime @default(now())
+
+  session         Session  @relation(fields: [sessionId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@map("session_feedback")
+}
+
+model Feedback {
+  id              String   @id @default(cuid())
+  eventId         String
+  userId          String
+  overallRating   Int
+  organizationRating Int?
+  contentRating   Int?
+  networkingRating Int?
+  venueRating     Int?
+  comment         String?
+  recommendations String?
+  createdAt       DateTime @default(now())
+
+  event           Event    @relation(fields: [eventId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("feedback")
+}
