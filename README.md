@@ -56,3 +56,14 @@ eventconnect/
 │   └── vite.config.js
 └── README.md
 ```
+## ⚙️ Getting Started
+
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/saad001-dev/Event-Connect.git
