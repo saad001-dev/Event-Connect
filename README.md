@@ -28,3 +28,31 @@ A modern web application to connect people with events, networking opportunities
 - Git & GitHub
 
 ## 📁 Project Structure
+
+```
+eventconnect/
+├── frontend/
+│   ├── src/
+│   │   ├── pages/          # All page components
+│   │   │   ├── LoginPage.jsx
+│   │   │   ├── RegisterPage.jsx
+│   │   │   ├── ProfilePage.jsx
+│   │   │   ├── SessionsPage.jsx
+│   │   │   └── NetworkingPage.jsx
+│   │   ├── store/          # Zustand state management
+│   │   │   ├── auth.store.js
+│   │   │   └── event.store.js
+│   │   ├── types/          # TypeScript types
+│   │   ├── utils/          # Helper functions
+│   │   ├── App.jsx         # Main app component
+│   │   ├── index.css       # Global styles
+│   │   └── main.jsx        # Entry point
+│   ├── public/             # Static assets
+│   ├── .env                # Environment variables
+│   ├── .gitignore
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package.json
+│   └── vite.config.js
+└── README.md
+```
